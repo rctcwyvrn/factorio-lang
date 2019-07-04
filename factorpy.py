@@ -68,23 +68,21 @@ def all_waiting(facts):
 	return res
 def standard_env():
 	env = {}
-	env.update(vars(math)) # sin, cos, sqrt, pi, ...
 	env.update({
 	    'print':(print,1),
-	    'plus':(op.add,2),
+	    '+':(op.add,2),
 	    'special':(special,2)
 	})
-	#env.update(standard_lib.env_data)
 	return env
 
 def import_special(env,i_lines):
+	utils.update_env(env, importlib.import_module("standard_lib")) #always import the standard_lib first because things get overwritten
 	for line in i_lines:
 		filename = line.replace("import","").replace(".py","").strip()
 		if DEBUG:
 			print("importing:",filename)
 		f = importlib.import_module(filename)
 		env = utils.update_env(env,f)
-	utils.update_env(env, importlib.import_module("standard_lib"))
 	return env
 
 def generate_factory(fact_str):
@@ -96,6 +94,8 @@ def generate_factory(fact_str):
 		return fn, number_of_inputs,label
 	except KeyError:
 		raise SyntaxError("No function in current env called:"+fact_str)
+
+#Whistles nervously
 def atom(x, constants):
 	try: 
 		val = int(x)
@@ -110,7 +110,7 @@ def atom(x, constants):
 					if s == None:
 						raise SyntaxError("No variable found with name, "+x)
 					else:
-						val = x.replace("\"","")
+						val = x.replace("\"","").replace("'","") #String, get rid of the quotes
 	return val
 
 #Converts a list of rules to a list of factories and it's associated storage
@@ -175,10 +175,8 @@ def setup_for_eval(rules,constants):
 		else:
 			raise SyntaxError("error, cannot pipe into non-function")
 
-		#Setup the from_factory
+		#Setup the from_factory/atom
 		if r_from.find("()") == -1:
-			#storage[data['in_id'][-1]] = int(r_from)
-			#storage[data['in_id'][-1]] = utils.parse_list(r_from)#THIS IS JANK AND TEMPORARY :: the int part, the other part is pretty smart
 			val = atom(r_from,constants)
 			storage[data['in_id'][-1]] = val
 			data['num_waiting']-=1
@@ -203,15 +201,12 @@ def setup_for_eval(rules,constants):
 #TODO: make this multithreaded!! that is the main point of the language after all
 def eval(facts,storage):
 	new_outputs = []
-	loops = 0
-	while loops < 10:
-		#print(facts)
-		#print(storage)
+	while True:
 		if DEBUG:
 			utils.pretty_print(facts,storage)
+
 		if all_waiting(facts):
 			print("All factories have stopped, halting evaluation")
-			loops = 99
 			break
 		else:
 			for factory in facts:
@@ -245,9 +240,8 @@ def eval(facts,storage):
 						factory['num_waiting']-=1
 						if factory['num_waiting'] == 0:
 							factory['status'] = 'ready'
-			loops+=1
 			new_outputs = []
-			#time.sleep(10)
+			#time.sleep(10) #ITS GOING TOOO FAST, SLOW IT DOWN
 
 f = open("test.fl")
 sections = section(f.readlines())
