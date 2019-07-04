@@ -1,2 +1,2 @@
-def say_hi(x):
-	print("hi")
+def say_hi(name):
+	print("hi "+name)

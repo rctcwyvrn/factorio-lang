@@ -1,11 +1,11 @@
 let x = [12,1,4,51,2,16,42,124214,2491,42,41]
 import bonus.py
 
-x -> say_hi()
+"lily" -> say_hi()
 x -> min()_b -> extract()[1]
 x -> extract()[0]
-extract() -> sort() -> concat()[0]
-x -> min()_a -> concat()[1]
+extract() -> sort() -> append_front()[0]
+x -> min()_a -> append_front()[1]
 
 "result=" -> print()_c
-concat() -> print()_final
+append_front() -> print()_final
