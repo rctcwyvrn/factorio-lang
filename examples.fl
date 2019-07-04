@@ -2,7 +2,7 @@
 
 
 factory qsort-factory{
-	input: type() == basic.list & \{ #rules for inputs, also a lambda factory
+	input: type() == basic.list & \{ #rules for inputs, also a lambda factory, also this is only one idea for how to do this
 	in->first() -> == basic.int -> out}
 
 	output: in->type() #rules for outputs
@@ -12,7 +12,7 @@ factory qsort-factory{
 		x -> first() -> break_eq()[1]
 		break_eq()[0] -> qsort-factory() -> append()[0]
 		break_eq()[1] -> append()[1] -> concat()[0]
-		break_eq()[2] -> qsort-factory() -> concat()[2]
+		break_eq()[2] -> qsort-factory() -> concat()[1]
 
 	final: #runs after all factories are waiting
 		concat()->out
@@ -20,26 +20,29 @@ factory qsort-factory{
 
 factory break_eq{
 	input: 
-		[0]:: type() == basic.list & first() == basic.int #if this is something you use alot, you can define this type in an accompanying datatype file, also note that this is completely different to the one in qsortfactory, because there are just dumb ideas
+		[0]:: type() == basic.list & first() == basic.int #if this is something you use alot, you can define this type in an accompanying datatype file, 
+		#also note that this is completely different to the one in qsortfactory, because there are just dumb ideas
 		[1]:: type() == basic.int
 
 	output: 
 		[0]:: in[0]->type()
 		[1]:: in[0] -> type()
 		[2]:: in[0]->type()
-
+#segment is a special factory becuase it take one input and create multiple outputs to the same port, one per cycle
 	internal: 
-		in[0] -> segment() -> gteq()[0] #segment breaks the list into individual elements
+		in[0] -> segment() -> gteq()[0] #segment breaks the list into individual elements and outputs them one at a time to the same port
 		let x = in[1] #define a new constant
+#infinite is like segment but it just outputs whatever the old input was over and over again
 		x -> infinite() -> gteq()[1] #if gt or eq then outputs to 0, else outputs to 1
 		gteq()[0] -> eq()
-		gteq()[1] -> combine()_lessthan		#combine takes a bunch of individual inputs, but only collects them together into a list when prompted for an output
+		gteq()[1] -> combine()_lessthan		
+#combine is another special one, it takes a bunch of individual inputs, but only collects them together into a list when prompted for an output
 		x -> infinite() -> eq()
 		eq()[0] -> combine()_middle
 		eq()[1] -> combine()_greaterthan
 
 	final:
-		combine()_greaterthan -> out[2]
+		combine()_greaterthan -> out[2] #So combine takes inputs every cycle, and then only outputs here
 		combine()_middle -> out[1]
 		combine()_lessthan -> out[0]
 }
