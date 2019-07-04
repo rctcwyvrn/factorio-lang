@@ -49,3 +49,9 @@ def update_env(env,module):
 			env[mem[0]] = (mem[1],arg_num)
 			#print("adding fn=",mem[0])
 	return env
+
+def all_waiting(facts):
+	res = True
+	for fact in facts:
+		res = res and fact['status'] == "waiting"
+	return res

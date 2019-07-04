@@ -58,20 +58,11 @@ def parse_rules(lines):
 			rules.append(rule)
 	return rules
 
-def special(a,b):
-	return a+3*b
-
-def all_waiting(facts):
-	res = True
-	for fact in facts:
-		res = res and fact['status'] == "waiting"
-	return res
 def standard_env():
 	env = {}
 	env.update({
 	    'print':(print,1),
 	    '+':(op.add,2),
-	    'special':(special,2)
 	})
 	return env
 
@@ -205,7 +196,7 @@ def eval(facts,storage):
 		if DEBUG:
 			utils.pretty_print(facts,storage)
 
-		if all_waiting(facts):
+		if utils.all_waiting(facts):
 			print("All factories have stopped, halting evaluation")
 			break
 		else:
