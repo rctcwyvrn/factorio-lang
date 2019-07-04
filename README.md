@@ -2,8 +2,9 @@
 
 **Have you ever wanted to code by defining conveyor belts between concurrent by default factories?**  
 
-Probably not. Especially not if the language is a buggy implementation in python. *BUT* if you have then **THIS** is the *LANGUAGE* for **YOU**!
+Probably not. Especially not if the language is a buggy implementation in python. **BUT** if you have then **THIS** is the **LANGUAGE** for **YOU**!
 
+**factorio-lang**:*the language so weird that I can trick you into thinking it's actually useful for a few minutes*
 **Now that I have your expectations set low, here's the features of the language:**
 1. Syntax is defining what goes in and what goes out of functions, in which port and out which ports
 2. Because of #1, the language is concurrent by default, every factory "runs" indepentently from one another, and simply waits if there is no input
