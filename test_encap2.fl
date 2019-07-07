@@ -1,0 +1,13 @@
+factory literally_plus(){
+	in -> +()
+	5 -> +()
+	+() -> out
+}
+
+factory literally_print(){
+	in -> print()_a
+	1421412 -> literally_plus()
+	literally_plus() -> out
+}
+
+"hi jessica" -> literally_print() -> print()_b
