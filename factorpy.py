@@ -20,7 +20,7 @@ import standard_lib, utils
 #Small Todo's
 #make 1-> special()[0] ->print() possible??
 
-DEBUG = True
+DEBUG = False
 
 def section(lines):
 	cons_section = []
@@ -200,7 +200,8 @@ def setup_for_eval(rules,constants, encaped_facts, in_factory_def=False):
 					storage = storage + internal_storage
 					for fact in internal_facts:
 						fact['in_id'] = [x + cur_storage_size for x in fact['in_id']]
-						fact['out_id'] += cur_storage_size
+						if not fact['out_id'] == in_out_ports['out']:
+							fact['out_id'] += cur_storage_size
 					factories +=internal_facts
 					data = {
 						'in_id':[x + cur_storage_size for x in in_out_ports['in']],
