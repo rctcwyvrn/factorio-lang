@@ -1,5 +1,10 @@
 import inspect
 
+def in_identifier():
+	print("you arent supposed to be here")
+def out_identifier():
+	print("you arent supposed to be here")
+
 def parse_list(list_str):
 	out = []
 	building = ""
@@ -46,9 +51,10 @@ def update_env(env,module):
 			z = inspect.getmembers(y[4][1])
 			#print(z[23])
 			arg_num = z[23][1]
-			env[mem[0]] = (mem[1],arg_num)
+			env[mem[0]] = (mem[1],arg_num,False)
 			#print("adding fn=",mem[0])
 	return env
+
 
 def all_waiting(facts):
 	res = True

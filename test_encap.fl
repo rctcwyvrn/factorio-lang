@@ -1,0 +1,12 @@
+factory sort_me(){
+	let x = in
+	x -> min()_b -> extract()[1]
+	x -> extract()[0]
+	extract() -> sort() -> append_front()[0]
+	x -> min()_a -> append_front()[1]
+
+	"result=" -> print()_c
+	append_front() -> out
+}
+
+[12,1,4,51,2,16,42,124214,2491,42,41] -> sort_me() -> print()
