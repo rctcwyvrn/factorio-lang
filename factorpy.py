@@ -157,6 +157,10 @@ def setup_for_eval(rules,constants, encaped_facts, in_factory_def=False):
 		r_to = rule['to'].strip()
 
 		#Setup/update the destination factory
+		if DEBUG:
+			print("setting up r_to=",r_to)
+
+		sending_to_encap_out = False
 		if r_to.find("()") != -1:
 			fixed_fact_str = r_to
 			in_num = None #This stays as nonetype if the function call did not specify which input it wanted to go to
@@ -175,14 +179,14 @@ def setup_for_eval(rules,constants, encaped_facts, in_factory_def=False):
 			#updated_factory = None
 			for x in l:
 				if x != None:
-					#Match, append on the input_id
+					#Found a match, append on the input_id
 					x['in_id'].append(input_id)
 					x['id_to_in_num'].append(in_num)
 					#factories[i] = x
 					data = x
 					exists = True
-					#if DEBUG:
-						#print("adding input to factory "+x['name']+ " new in_id = ",input_id)
+					if DEBUG:
+						print("adding input to factory "+x['name']+ " new in_id = ",input_id)
 					break
 				i+=1
 
@@ -221,7 +225,7 @@ def setup_for_eval(rules,constants, encaped_facts, in_factory_def=False):
 			output_id+=1
 		else:
 			if in_factory_def and r_to == "out":
-				in_out_ports['out'] = data['out_id'] #when defining an internal factory we also return a dict of the in/out ports which we use for when we use the internal fact later
+				sending_to_encap_out = True
 			else:
 				raise SyntaxError("error, cannot pipe into non-function")
 
@@ -244,11 +248,11 @@ def setup_for_eval(rules,constants, encaped_facts, in_factory_def=False):
 					storage[data['in_id'][-1]] = val
 					data['num_waiting']-=1
 
-			#if not then:
+			#if r_from is a constant and this is not an internal def
 			else:
 				val = atom(r_from,constants)
 
-				#Are we dealing with an input going into an internal factory?
+				#Are we dealing with an input going _into_ an internal factory?
 				if skip:
 					new_inputs = []
 					for in_id in data['in_id']:
@@ -271,28 +275,50 @@ def setup_for_eval(rules,constants, encaped_facts, in_factory_def=False):
 					if data['num_waiting'] <= 0:
 						data['status'] = 'ready' 
 		else:
+			#if r_from is a function
 			try:
 				r_from = r_from.strip()
+
+				print("looking for r_from=", r_from)
+				#see if it exists in the current list of factories
 				waiting_for = None
 				for fact in factories:
 					if fact['name'] == r_from:
 						waiting_for = fact
-				data['in_id'][-1] = waiting_for['out_id']
+
+				if sending_to_encap_out:
+					in_out_ports['out'] = waiting_for['out_id']
+					skip = True
+					if DEBUG:
+						print("final out =  ", waiting_for['name'], " sending to ",waiting_for['out_id'], "which is the out_port")
+				else:	
+					if DEBUG:
+						print("changing ",data['name'], " to be waiting for ", waiting_for['name'], " at ",waiting_for['out_id'])
+
+					data['in_id'][-1] = waiting_for['out_id']
 
 			except TypeError:
+
+				#see if it exists in the list of defined encapsulated factories
 				good = False
 				for i_fact in encaped_facts:
 					#print("COMAPRE THESE",i_fact['name'],r_from)
 					if i_fact['name'] == r_from:
-						data['in_id'][-1] = i_fact['out_id']
+						data['in_id'][-1] = i_fact['out_id'] #+ cur_storage_size
 						good = True
+
 				if not good:
 					raise SyntaxError("Cannot wait for input from non-existant factory")
+
+		#only consider adding the new factory if r_to was not an encapsulated factory
 		if not skip:
 			if not exists:
+				#Append the new factory if it didnt already exist
 				factories.append(data)
 			else:
+				#otherwise just update it's value
 				factories[i] = data
+
 	if in_factory_def:
 		return factories, storage, in_out_ports
 	else:
@@ -373,7 +399,7 @@ for f_name, (f_constants,f_rules,f_imports)in zip(factory_defs.keys(),factory_de
 
 	#create the portable factory
 	facts, storage, in_out_ports = setup_for_eval(rules,const, internal_facts, True) #FUCK IT CAN'T RECURSE IF I DO IT LIKE THIS FUCK FUCKFUCKITY FUCK
-	print("list of internal factories",facts)
+	#print("list of internal factories",facts)
 	if DEBUG:
 		print("previewing internal factory, name=",f_name)
 		utils.pretty_print(facts,storage)
@@ -389,7 +415,7 @@ for f_name, (f_constants,f_rules,f_imports)in zip(factory_defs.keys(),factory_de
 
 	env[f_name] = (facts,storage,in_out_ports),1,True
 
-print("list of internal facts:",internal_facts)
+#print("list of internal facts:",internal_facts)
 
 global_facts,global_storage = setup_for_eval(global_rules,global_constants, internal_facts)
 
