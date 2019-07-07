@@ -1,0 +1,4 @@
+1 -> +()
+2 -> +() -> special()[1]
+5 -> special()[0]
+special() -> print()

@@ -1,5 +1,10 @@
 import inspect
 
+def in_identifier():
+	print("you arent supposed to be here")
+def out_identifier():
+	print("you arent supposed to be here")
+
 def parse_list(list_str):
 	out = []
 	building = ""
@@ -21,6 +26,7 @@ def pretty_print(facts,storage):
 		status_line += factory['name'] +" "*(32-len(factory['name']+factory['status'])) + factory['status']
 		if factory['status'] == "waiting":
 			status_line += "\t\t"+"listening to ports " + str(factory['in_id'])
+			status_line += (64 - len(status_line))*" "  + "\t going to send to " + str(factory['out_id'])
 		else:
 			status_line += "\t\t"+"sending to " + str(factory['out_id']) + ", consuming storage indexes= " + str(factory['in_id'])
 		print(status_line)
@@ -46,9 +52,10 @@ def update_env(env,module):
 			z = inspect.getmembers(y[4][1])
 			#print(z[23])
 			arg_num = z[23][1]
-			env[mem[0]] = (mem[1],arg_num)
+			env[mem[0]] = (mem[1],arg_num,False)
 			#print("adding fn=",mem[0])
 	return env
+
 
 def all_waiting(facts):
 	res = True

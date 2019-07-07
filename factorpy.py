@@ -26,31 +26,57 @@ def section(lines):
 	cons_section = []
 	rule_section = []
 	imports = []
+	factory_defs = {} #key = factory name, value = standard sections list
+	current_factory_name = None
+	in_factory_def = False
 	for line in lines:
-		if line[:3] == "let":
-			cons_section.append(line)
-		elif line[:6] == "import":
-			imports.append(line)
+		if in_factory_def:
+			line = line.strip()
+			if line[:3] == "let":
+				factory_defs[current_factory_name][0].append(line)
+			elif line[:6] == "import":
+				factory_defs[current_factory_name][2].append(line)
+			elif line == "}":
+				in_factory_def = False
+			else:
+				factory_defs[current_factory_name][1].append(line)
 		else:
-			rule_section.append(line)
-	return cons_section,rule_section,imports
+			if line[:3] == "let":
+				cons_section.append(line)
+			elif line[:6] == "import":
+				imports.append(line)
+			elif line[:7] == "factory":
+				parts = line.split()
+				current_factory_name = parts[1][:-3]
+				factory_defs[current_factory_name] = [[],[],[]]
+				in_factory_def = True
+			else:
+				rule_section.append(line)
+	return (cons_section,rule_section,imports), factory_defs
 
-def parse_constants(c_lines):
+def parse_constants(c_lines, in_factory_def = False):
 	cons_dict = {}
 	#print(v_lines)
 	for line in c_lines:
 		line = line[3:]
 		name, value = line.split("=")
-		value = atom(value,cons_dict)
+		if not in_factory_def:
+			value = atom(value,cons_dict)
+		else:
+			value = atom_for_factory_defs(value,cons_dict)
 		cons_dict[name.strip()] = value
 	#print(var_dict)
 	return cons_dict
 
-def parse_rules(lines):
+def parse_rules(lines,in_factory_def=False):
 	rules = []
 	for line in lines:
 		parts  = line.split("->")
 		for i in range(len(parts)-1):
+			if parts[i] == "in":
+				parts[i] = utils.in_identifier
+			if parts[i+1] == "out":
+				parts[i+1] = utils.out_identifier 
 			rule = {
 				'from':parts[i],
 				'to':parts[i+1]
@@ -61,8 +87,8 @@ def parse_rules(lines):
 def standard_env():
 	env = {}
 	env.update({
-	    'print':(print,1),
-	    '+':(op.add,2),
+	    'print':(print,1,False),
+	    '+':(op.add,2,False),
 	})
 	return env
 
@@ -81,11 +107,20 @@ def generate_factory(fact_str):
 	fact_str,label = fact_str.split("()")
 	#fact_str+="()" #maybe, not sure
 	try:
-		fn, number_of_inputs = env[fact_str]
-		return fn, number_of_inputs,label
+		#if DEBUG:
+			#print("Generating factory for name=",fact_str,"info in env=",env[fact_str])
+		fn, number_of_inputs, is_factory = env[fact_str]
+		return fn, number_of_inputs,label, is_factory
 	except KeyError:
 		raise SyntaxError("No function in current env called:"+fact_str)
 
+def atom_for_factory_defs(x, constants):
+	if x.strip() == "in":
+		return utils.in_identifier
+	if x.strip() == "out":
+		return utils.out_identifier
+	else:
+		return atom(x,constants)
 #Whistles nervously
 def atom(x, constants):
 	try: 
@@ -105,11 +140,16 @@ def atom(x, constants):
 	return val
 
 #Converts a list of rules to a list of factories and it's associated storage
-def setup_for_eval(rules,constants):
+def setup_for_eval(rules,constants, encaped_facts, in_factory_def=False):
 	factories = []
 	input_id = 0
-	storage = [0]*256 #where the inputs are going to be stored, current storage size is 256
+	cur_storage_size = 256
+	storage = [0]*cur_storage_size #where the inputs are going to be stored, current storage size is 256
 	output_id = 50 # this has gotta be big, need a system for dynamically increasing output_id and storage size for when things get big
+	in_out_ports = {
+		'in':[],
+		'out':[]
+	}
 	for rule in rules:
 		if input_id >= 256 or output_id >=256:
 			raise Exception("Not enough storage space, calm down with all those pipes")
@@ -117,6 +157,10 @@ def setup_for_eval(rules,constants):
 		r_to = rule['to'].strip()
 
 		#Setup/update the destination factory
+		if DEBUG:
+			print("setting up r_to=",r_to)
+
+		sending_to_encap_out = False
 		if r_to.find("()") != -1:
 			fixed_fact_str = r_to
 			in_num = None #This stays as nonetype if the function call did not specify which input it wanted to go to
@@ -125,8 +169,8 @@ def setup_for_eval(rules,constants):
 			if x != None:
 				fixed_fact_str = r_to[0:x.span()[0]-2]
 				in_num = int(r_to[x.span()[0]-1:x.span()[1]-1])
-				if DEBUG:
-					print("weirdo, fixed=",fixed_fact_str,"in_num=",in_num)
+				#if DEBUG:
+					#print("weirdo, fixed=",fixed_fact_str,"in_num=",in_num)
 
 			#check if the factory alredy exists
 			l = [x if x['name'] == fixed_fact_str else None  for x in factories]
@@ -135,7 +179,7 @@ def setup_for_eval(rules,constants):
 			#updated_factory = None
 			for x in l:
 				if x != None:
-					#Match, append on the input_id
+					#Found a match, append on the input_id
 					x['in_id'].append(input_id)
 					x['id_to_in_num'].append(in_num)
 					#factories[i] = x
@@ -146,48 +190,140 @@ def setup_for_eval(rules,constants):
 					break
 				i+=1
 
+			skip = False
 			if not exists:
-				factory, input_num, label = generate_factory(fixed_fact_str)
-				input_list = [input_id]
-				data = {
-					'name':fixed_fact_str,
-					'fact': factory,
-					'in_id': input_list, #the port it is waiting on 
-					'out_id': output_id, #the port it outputs on
-					'status':'waiting',
-					'in_num':input_num, #the number of inputs it's expecting
-					'id_to_in_num':[in_num],
-					'num_waiting':input_num
-					#Todo: Implement labels for the different factories
-					#TODO: Add a number that represents the number of input's it's currently waiting for
-				}
+				factory, input_num, label, is_factory = generate_factory(fixed_fact_str)
+				if is_factory:
+					internal_facts, internal_storage, in_out_ports = factory
+
+					#Append the storage from the factory info onto the current storage
+					storage = storage + internal_storage
+					for fact in internal_facts:
+						fact['in_id'] = [x + cur_storage_size for x in fact['in_id']]
+						if not fact['out_id'] == in_out_ports['out']:
+							fact['out_id'] += cur_storage_size
+					factories +=internal_facts
+					data = {
+						'in_id':[x + cur_storage_size for x in in_out_ports['in']],
+						'out_id':in_out_ports['out']+cur_storage_size,
+					}
+					skip = True
+				else:
+					input_list = [input_id]
+					data = {
+						'name':fixed_fact_str,
+						'fact': factory,
+						'in_id': input_list, #the port it is waiting on 
+						'out_id': output_id, #the port it outputs on
+						'status':'waiting',
+						'in_num':input_num, #the number of inputs it's expecting
+						'id_to_in_num':[in_num],
+						'num_waiting':input_num
+						#Todo: Implement labels for the different factories
+						#TODO: Add a number that represents the number of input's it's currently waiting for
+					}
 			input_id+=1
 			output_id+=1
 		else:
-			raise SyntaxError("error, cannot pipe into non-function")
+			if in_factory_def and r_to == "out":
+				sending_to_encap_out = True
+			else:
+				raise SyntaxError("error, cannot pipe into non-function")
 
 		#Setup the from_factory/atom
 		if r_from.find("()") == -1:
-			val = atom(r_from,constants)
-			storage[data['in_id'][-1]] = val
-			data['num_waiting']-=1
-			if data['num_waiting'] == 0:
-				data['status'] = 'ready' 
+			#If r_from is a constant
+
+			#Is this an internal factory def?
+			if in_factory_def:
+
+				val = atom_for_factory_defs(r_from,constants)
+				#print("internal val",val)
+
+				if val == utils.in_identifier: #We want to keep track of which ports the factory wants to in and out to for later
+					in_out_ports['in'].append(data['in_id'][-1])
+
+				elif val == utils.out_identifier:
+					raise SyntaxError("Can't pipe in from an outwards port")
+				else:
+					storage[data['in_id'][-1]] = val
+					data['num_waiting']-=1
+
+			#if r_from is a constant and this is not an internal def
+			else:
+				val = atom(r_from,constants)
+
+				#Are we dealing with an input going _into_ an internal factory?
+				if skip:
+					new_inputs = []
+					for in_id in data['in_id']:
+						storage[in_id] = val
+						new_inputs.append(in_id)
+
+					#Set all the factories that were waiting for those values to gogogo
+					for i in range(len(internal_facts)):
+						fact = factories[-1*(i+1)] #this loops through all the new factories that were added as part of the new internal one
+						for in_id in fact['in_id']:
+							if in_id in new_inputs:
+								fact['num_waiting']-=1
+							if fact['num_waiting'] <= 0:
+								fact['status']= 'ready'
+
+				#if not
+				else:
+					storage[data['in_id'][-1]] = val
+					data['num_waiting']-=1
+					if data['num_waiting'] <= 0:
+						data['status'] = 'ready' 
 		else:
+			#if r_from is a function
 			try:
+				r_from = r_from.strip()
+
+				print("looking for r_from=", r_from)
+				#see if it exists in the current list of factories
 				waiting_for = None
 				for fact in factories:
 					if fact['name'] == r_from:
 						waiting_for = fact
-				data['in_id'][-1] = waiting_for['out_id']
-			except TypeError:
-				raise SyntaxError("Cannot wait for input from non-existant factory")
 
-		if not exists:
-			factories.append(data)
-		else:
-			factories[i] = data
-	return factories, storage
+				if sending_to_encap_out:
+					in_out_ports['out'] = waiting_for['out_id']
+					skip = True
+					if DEBUG:
+						print("final out =  ", waiting_for['name'], " sending to ",waiting_for['out_id'], "which is the out_port")
+				else:	
+					if DEBUG:
+						print("changing ",data['name'], " to be waiting for ", waiting_for['name'], " at ",waiting_for['out_id'])
+
+					data['in_id'][-1] = waiting_for['out_id']
+
+			except TypeError:
+
+				#see if it exists in the list of defined encapsulated factories
+				good = False
+				for i_fact in encaped_facts:
+					#print("COMAPRE THESE",i_fact['name'],r_from)
+					if i_fact['name'] == r_from:
+						data['in_id'][-1] = i_fact['out_id'] #+ cur_storage_size
+						good = True
+
+				if not good:
+					raise SyntaxError("Cannot wait for input from non-existant factory")
+
+		#only consider adding the new factory if r_to was not an encapsulated factory
+		if not skip:
+			if not exists:
+				#Append the new factory if it didnt already exist
+				factories.append(data)
+			else:
+				#otherwise just update it's value
+				factories[i] = data
+
+	if in_factory_def:
+		return factories, storage, in_out_ports
+	else:
+		return factories, storage
 
 #TODO: make this multithreaded!! that is the main point of the language after all
 def eval(facts,storage):
@@ -234,18 +370,56 @@ def eval(facts,storage):
 			new_outputs = []
 			#time.sleep(10) #ITS GOING TOOO FAST, SLOW IT DOWN
 
-f = open("test.fl")
-sections = section(f.readlines())
+f = open("test_encap.fl")
+sections,factory_defs = section(f.readlines())
 
-constants = parse_constants(sections[0])
-rules = parse_rules(sections[1])
+if DEBUG:
+	print("sections=",sections)
+	print("factory defs=",factory_defs)
+
+global_constants = parse_constants(sections[0])
+global_rules = parse_rules(sections[1])
 env = standard_env()
 env = import_special(env,sections[2])
 
+internal_facts = []
 if DEBUG:
-	print("rules =",rules)
-facts,storage = setup_for_eval(rules,constants)
+	print("global rules =",global_rules)
+	print("global constants = ",global_constants)
+
+for f_name, (f_constants,f_rules,f_imports)in zip(factory_defs.keys(),factory_defs.values()):
+	const = parse_constants(f_constants,True)
+	#print(f_constants)
+	rules = parse_rules(f_rules,True)
+	#env = utils.add_factory(env,f_name)
+	if DEBUG:
+		print("factory constants",const)
+		print("factory rules",rules)
+	#uhh not sure what to do about the env right now...
+	#probably just don't allow local only imports?
+
+	#create the portable factory
+	facts, storage, in_out_ports = setup_for_eval(rules,const, internal_facts, True) #FUCK IT CAN'T RECURSE IF I DO IT LIKE THIS FUCK FUCKFUCKITY FUCK
+	#print("list of internal factories",facts)
+	if DEBUG:
+		print("previewing internal factory, name=",f_name)
+		utils.pretty_print(facts,storage)
+		print("internal factory is waiting for ",in_out_ports['in'])
+		print("internal factory is sending to ",in_out_ports['out'])
+
+	internal_fact = {
+		'name':f_name+"()",
+		'in_id':in_out_ports['in'],
+		'out_id':in_out_ports['out']
+	}
+	internal_facts.append(internal_fact)
+
+	env[f_name] = (facts,storage,in_out_ports),1,True
+
+#print("list of internal facts:",internal_facts)
+
+global_facts,global_storage = setup_for_eval(global_rules,global_constants, internal_facts)
 
 print("-"*10+"starting evalutation"+"-"*10)
-eval(facts,storage)
+eval(global_facts,global_storage)
 
