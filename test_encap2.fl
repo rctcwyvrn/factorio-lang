@@ -6,7 +6,7 @@ factory literally_plus(){
 
 factory literally_print(){
 	in -> print()_a
-	1421412 -> literally_plus()
+	5 -> literally_plus()
 	literally_plus() -> out
 }
 
