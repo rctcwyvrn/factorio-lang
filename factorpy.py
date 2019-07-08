@@ -466,6 +466,6 @@ f = open("test_encap2.fl")
 env = None
 run_file(f)
 
-f = open("test.fl")
+f = open("test2.fl")
 env = None
 run_file(f)
