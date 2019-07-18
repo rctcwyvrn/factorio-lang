@@ -1,10 +1,10 @@
-# factorio-lang
+# factorpy
 
 **Have you ever wanted to code by defining conveyor belts between concurrent by default factories?**  
 
 Probably not. Especially not if the language is a buggy implementation in python. **BUT** if you have then **THIS** is the **LANGUAGE** for **YOU**!
 
-### factorio-lang, *the language so weird that I can trick you into thinking it's actually useful for a few minutes* ###  
+### factorpy, *the language so weird that I can trick you into thinking it's actually useful for a few minutes* ###  
 
 
 **Now that I have your expectations set low, here's the features of the language:**
@@ -13,8 +13,8 @@ Probably not. Especially not if the language is a buggy implementation in python
 3. Support for importing python functions, so you can import functions and have them act as factories. This lets you write some more difficult code in python and use them as parts within your factory
 
 **What can I use this for?**  
-- Paralleizing quickly but badly. Factorio-lang is a simple way to parallelize tasks, letting you write the complicated computation parts in python and use factorio-lang to manage the control/data flow
-- Education. I think that this way of thinking about computer programs is useful for those who have 0 experience or have trouble with thinking about normal imperative languages. I plan to write some basic tutorials in factorio-lang as well as a GUI + visualizer to teach factorio-lang. More details in teaching.md
+- Paralleizing quickly but badly. Factorio-lang is a simple way to parallelize tasks, letting you write the complicated computation parts in python and use factorpy to manage the control/data flow
+- Education. I think that this way of thinking about computer programs is useful for those who have 0 experience or have trouble with thinking about normal imperative languages. I plan to write some basic tutorials in factorpy as well as a GUI + visualizer to teach factorpy. More details in teaching.md
 
 **How do I use it?**  
 1. Download the repo
