@@ -21,7 +21,7 @@ factory qsort-factory{
 factory break_eq{
 	input: 
 		[0]:: type() == basic.list & first() == basic.int #if this is something you use alot, you can define this type in an accompanying datatype file, 
-		#also note that this is completely different to the one in qsortfactory, because there are just dumb ideas
+		#also note that this is completely different to the one in qsortfactory, because these are just dumb ideas
 		[1]:: type() == basic.int
 
 	output: 
