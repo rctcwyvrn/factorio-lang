@@ -16,7 +16,7 @@ Probably not. Especially not if the language is a buggy implementation in python
 - Paralleizing quickly but badly. Factorio-lang is a simple way to parallelize tasks, letting you write the complicated computation parts in python and use factorpy to manage the control/data flow
 - Education. I think that this way of thinking about computer programs is useful for those who have 0 experience or have trouble with thinking about normal imperative languages. I plan to write some basic tutorials in factorpy as well as a GUI + visualizer to teach factorpy. More details in teaching.md
 
-**I like the idea, but this is so buggy and terrible**
+**I like the idea, but this is so buggy and terrible**  
 Thanks, I only just (26/07/19) realized that my idea isn't actually a new one (which always seems to be the case doesn't it). This programming paradigm is called [dataflow programming](https://en.wikipedia.org/wiki/Dataflow_programming) and is used in things like scientific computation, string parsing, among other things.
 
 **How do I use it?**  
