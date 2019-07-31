@@ -35,3 +35,10 @@ test.fl and similarity named files are going to be whatever I'm personally testi
 See interpreter_doc.md and cmooon my code isn't thaaaaaaaaat bad. EDIT: it's pretty bad
 
 
+**Current issues**
+
+Many many issues
+
+1. No recursion because of 2
+2. Can't use functions that have multiple outputs and can't specify which port an output should go to because of 3
+3. Can't use python inspect to determine how many outputs an imported function will output, which could be solved by just passing through the code once to see how many the writer is expecting and working with that, but that seems incredibly stupid
